@@ -1,0 +1,86 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SmartSync</title><style>
+:root{--bg:#eef1ee;--pane:#fbfcfa;--ink:#16241f;--mut:#5d6e66;--line:#d5ddd7;--acc:#0d6b57;--acc2:#e0f0ea;--warn:#b4541a;--err:#a82b2b;--blue:#245fa3;font:15px/1.5 "Segoe UI Variable","Segoe UI",system-ui,sans-serif}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1714;--pane:#16201c;--ink:#e6efea;--mut:#8da198;--line:#26352f;--acc:#4cc2a1;--acc2:#16332b;--warn:#e19659;--err:#e57373;--blue:#7ab0ea}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);display:grid;grid-template-columns:210px 1fr;min-height:100vh}
+nav{padding:22px 14px;border-right:1px solid var(--line);position:sticky;top:0;height:100vh}
+nav h1{font:700 20px Georgia,serif;margin:0 8px 22px;letter-spacing:-.3px}nav h1 i{color:var(--acc);font-style:normal}
+nav button{display:block;width:100%;text-align:left;border:0;background:none;color:var(--mut);padding:9px 12px;border-radius:8px;font:inherit;cursor:pointer;margin-bottom:2px}
+nav button.on{background:var(--acc2);color:var(--acc);font-weight:600}nav button:hover{color:var(--ink)}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.live{margin:26px 8px 0;font-size:13px;color:var(--mut)}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--acc);margin-right:6px}.dot.busy{animation:p 1s infinite}.dot.th{background:var(--warn)}@keyframes p{50%{opacity:.25}}
+main{padding:28px 34px;max-width:1100px;width:100%}h2{font:700 26px Georgia,serif;margin:0 0 4px}.sub{color:var(--mut);margin:0 0 22px}
+.pane{background:var(--pane);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}.pane h3{margin:0 0 12px;font-size:15px}
+.ribbon{height:34px;border-radius:8px;background:repeating-linear-gradient(135deg,var(--acc2) 0 8px,transparent 8px 16px);border:1px solid var(--line);position:relative;overflow:hidden}
+.ribbon b{position:absolute;inset:0 auto 0 0;background:var(--acc);transition:width .6s}.rl{display:flex;justify-content:space-between;font-size:13px;color:var(--mut);margin-top:8px}
+.big{font:700 44px Georgia,serif;line-height:1;margin-bottom:6px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.stat{padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--pane)}.stat b{font-size:24px;display:block}.stat span{color:var(--mut);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:var(--mut);font-weight:600;padding:8px;border-bottom:1px solid var(--line)}td{padding:9px 8px;border-bottom:1px solid var(--line);word-break:break-all}tr.row{cursor:pointer}tr.row:hover td{background:var(--acc2)}
+.chip{padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;background:var(--acc2);color:var(--acc)}.chip.queued,.chip.syncing{background:#dde8f6;color:var(--blue)}.chip.deleted{background:#eee;color:var(--mut)}.chip.conflict,.chip.error{background:#f6dcdc;color:var(--err)}.flag{color:var(--warn);font-weight:600;font-size:12px;margin-left:6px}
+input,select{font:inherit;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--pane);color:var(--ink)}input[type=search]{width:100%}
+.btn{font:inherit;padding:9px 16px;border-radius:8px;border:1px solid var(--acc);background:var(--acc);color:#fff;cursor:pointer;font-weight:600}.btn.ghost{background:none;color:var(--acc)}
+.bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}.bar input{flex:1;min-width:220px}code{background:var(--acc2);padding:2px 6px;border-radius:5px;font-size:12px}
+.drawer{position:fixed;right:0;top:0;bottom:0;width:min(380px,100%);background:var(--pane);border-left:1px solid var(--line);padding:22px;transform:translateX(100%);transition:transform .25s;overflow:auto;z-index:5}.drawer.open{transform:none}
+.empty{padding:34px;text-align:center;color:var(--mut)}label{display:block;margin:0 0 14px;font-weight:600}label small{display:block;color:var(--mut);font-weight:400}
+section{display:none}section.on{display:block}canvas{width:100%;height:130px}
+@media(max-width:760px){body{grid-template-columns:1fr}nav{position:static;height:auto;display:flex;flex-wrap:wrap;gap:4px;border:0;padding:12px}nav h1{width:100%;margin-bottom:6px}nav button{width:auto}.live{display:none}main{padding:16px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<nav><h1>Smart<i>Sync</i></h1>
+<button class="on" data-t="ov">Overview</button><button data-t="fl">Files</button><button data-t="au">Activity</button><button data-t="st">Settings</button>
+<div class="live"><span class="dot" id="dot"></span><span id="live">Connecting…</span></div></nav>
+<main>
+<section id="ov" class="on"><h2>Overview</h2><p class="sub">Everything is encrypted on this PC before it leaves.</p>
+<div class="pane"><div class="big" id="saved">0%</div><div class="ribbon"><b id="rb" style="width:0"></b></div>
+<div class="rl"><span id="orig"></span><span id="stored"></span></div></div>
+<div class="grid" id="cards"></div>
+<div class="pane"><h3>System impact while syncing (CPU %)</h3><canvas id="cv"></canvas></div></section>
+
+<section id="fl"><h2>Files</h2><p class="sub">Search by name, or ask in plain words: “PDFs larger than 5 MB from last month”.</p>
+<div class="bar"><input type="search" id="q" placeholder="Search files…"><button class="btn" id="ask">Ask</button><button class="btn ghost" id="demo">Add sample files</button></div>
+<div id="sql" class="sub"></div><div class="pane" style="padding:6px 10px"><table id="ft"></table></div>
+<div class="pane" id="conflicts"><h3>Cloud conflicts</h3><span class="sub">Loading conflicts…</span></div><div class="pane" id="advice"><h3>Cleanup and cold-file review</h3><span class="sub">Loading local advice…</span></div></section>
+
+<section id="au"><h2>Activity</h2><p class="sub">Every sync, restore and delete, newest first.</p><div class="pane" style="padding:6px 10px"><table id="at"></table></div></section>
+
+<section id="st"><h2>Settings</h2><p class="sub">Control how much SmartSync uses your PC.</p><div class="pane" style="max-width:520px">
+<label>Queue order<small>Small files first (with aging) or first come, first served.</small><select id="pol"><option value="sjf">Small files first</option><option value="fcfs">First come, first served</option></select></label>
+<label>Pause syncing above CPU %<small>Workers wait while your PC is busy.</small><input type="number" id="cpu" min="10" max="100"></label>
+<label>Upload limit (MB/s)<input type="number" id="rate" min="1" value="50"></label>
+<button class="btn" id="save">Save settings</button></div></section>
+</main>
+<aside class="drawer" id="dr"><button class="btn ghost" onclick="dr.classList.remove('open')">Close</button><h3 id="dt" style="margin-top:16px"></h3><div id="dv"></div></aside>
+<script>
+const $=s=>document.querySelector(s),dr=$('#dr');
+const sz=n=>n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':n<1073741824?(n/1048576).toFixed(1)+' MB':(n/1073741824).toFixed(2)+' GB';
+const ago=t=>{const s=Date.now()/1000-t;return s<60?'just now':s<3600?Math.floor(s/60)+' min ago':s<86400?Math.floor(s/3600)+' h ago':new Date(t*1000).toLocaleDateString()};
+const J=async(u,o)=>{const r=await fetch(u,o);const d=await r.json();if(!r.ok)throw new Error(d.detail||'Request failed');return d};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button,section').forEach(e=>e.classList.remove('on'));b.classList.add('on');$('#'+b.dataset.t).classList.add('on');refresh()});
+function table(rows,el,click){if(!rows.length){el.innerHTML='<tr><td class="empty">Nothing here yet. Add a file to your sync folder, or use “Add sample files”.</td></tr>';return}
+ const ks=Object.keys(rows[0]).filter(k=>!['file_id','sensitive','version_id','hash'].includes(k));
+ el.innerHTML='<tr>'+ks.map(k=>`<th>${k}</th>`).join('')+'</tr>'+rows.map((r,i)=>`<tr class="${click?'row':''}" data-i="${i}">`+ks.map(k=>{let v=r[k];
+  if(k=='size')v=sz(v);else if(k=='mtime'||k=='ts'||k=='created_at')v=ago(v);else if(k=='state')v=`<span class="chip ${v}">${v}</span>`;else v=esc(v);
+  if(k=='path'&&r.sensitive)v+='<span class="flag">may contain secrets</span>';return`<td>${v}</td>`}).join('')+'</tr>').join('');
+ if(click)el.querySelectorAll('tr.row').forEach(tr=>tr.onclick=()=>click(rows[tr.dataset.i]))}
+async function openFile(f){if(!f.file_id)return;$('#dt').textContent=f.path;const v=await J('/api/versions/'+f.file_id);
+ $('#dv').innerHTML=v.map(x=>`<div class="pane"><b>Version ${x.version_id}</b> · ${sz(x.size)}<br><span class="sub">${ago(x.created_at)}</span><br><button class="btn ghost" data-v="${x.version_id}">Restore this version</button></div>`).join('');
+ $('#dv').querySelectorAll('button').forEach(b=>b.onclick=async()=>{await J('/api/restore/'+b.dataset.v,{method:'POST'});b.textContent='Restored'});dr.classList.add('open')}
+let chart=[];function draw(){const c=$('#cv'),x=c.getContext('2d'),w=c.width=c.clientWidth*2,h=c.height=260;x.clearRect(0,0,w,h);if(chart.length<2)return;
+ const st=getComputedStyle(document.body);x.strokeStyle=st.getPropertyValue('--acc');x.lineWidth=3;x.beginPath();
+ chart.forEach((m,i)=>{const px=i/(chart.length-1)*w,py=h-6-(m.cpu/100)*(h-12);i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke()}
+async function refresh(){try{const s=await J('/api/status');
+ const pct=s.original?Math.round(s.saved/s.original*100):0;$('#saved').textContent=pct+'% saved';$('#rb').style.width=pct+'%';
+ $('#orig').textContent='Original data '+sz(s.original);$('#stored').textContent='Stored in cloud '+sz(s.stored);
+ const sy=s.by_state.synced||0;$('#cards').innerHTML=[['Files tracked',s.files],['Synced',sy],['In queue',s.queue+s.active],['Duplicate blobs',s.dup_blobs],['Flagged as sensitive',s.sensitive]].map(c=>`<div class="stat"><b>${c[1]}</b><span>${c[0]}</span></div>`).join('');
+ $('#dot').className='dot'+(s.throttled?' th':s.active?' busy':'');$('#live').textContent=s.throttled?'Paused: PC is busy':s.active?'Syncing '+(s.queue+s.active)+' file(s)':'All synced';
+ chart=s.metrics;draw();if(document.activeElement!==$('#cpu')){$('#cpu').value=s.cpu_limit;$('#pol').value=s.policy}
+ if($('#fl').classList.contains('on')&&!$('#q').value)table(await J('/api/files'),$('#ft'),openFile);
+ if($('#fl').classList.contains('on')){const a=await J('/api/advice');$('#advice').innerHTML='<h3>Cleanup and cold-file review</h3><p>'+esc(a.summary)+'</p><small>Review cold files before deleting or archiving.</small>'}
+ if($('#fl').classList.contains('on')){const c=await J('/api/conflicts');$('#conflicts').innerHTML='<h3>Cloud conflicts</h3>'+ (c.length?c.map(x=>`<div class="pane"><b>${esc(x.path)}</b><p>${esc(x.summary)}</p>${['keep_local','keep_cloud','keep_both'].map(a=>`<button class="btn ghost" data-c="${x.conflict_id}" data-choice="${a}">${a.replace('_',' ')}</button> `).join('')}</div>`).join(''):'<span class="sub">No open conflicts.</span>');$('#conflicts').querySelectorAll('button').forEach(b=>b.onclick=async()=>{await J(`/api/conflicts/${b.dataset.c}/resolve?choice=${b.dataset.choice}`,{method:'POST'});refresh()})}
+ if($('#au').classList.contains('on'))table(await J('/api/audit'),$('#at'))}catch(e){$('#live').textContent='Server not reachable'}}
+$('#ask').onclick=async()=>{const q=$('#q').value;if(!q)return refresh();try{const r=await J('/api/search?q='+encodeURIComponent(q));$('#sql').innerHTML='Ran <code>'+esc(r.sql)+'</code> via '+esc(r.source);table(r.rows,$('#ft'),openFile)}catch(e){$('#sql').textContent=e.message}};
+$('#q').onkeydown=e=>{if(e.key=='Enter')$('#ask').click()};$('#q').oninput=()=>{if(!$('#q').value){$('#sql').textContent='';refresh()}};
+$('#demo').onclick=async()=>{await J('/api/demo',{method:'POST'});setTimeout(refresh,2500)};
+$('#save').onclick=async()=>{await J(`/api/settings?policy=${$('#pol').value}&cpu_limit=${$('#cpu').value}&rate_mb=${$('#rate').value}`,{method:'POST'});$('#save').textContent='Saved';setTimeout(()=>$('#save').textContent='Save settings',1500)};
+refresh();setInterval(refresh,2000);addEventListener('resize',draw);
+</script></body></html>

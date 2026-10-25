@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+watchdog
+psutil
+cryptography
+minio
